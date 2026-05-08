@@ -28,6 +28,15 @@ function stepDotClass(status: string) {
   return "bg-slate-300";
 }
 
+function readCachedJob(id: string) {
+  try {
+    const cached = sessionStorage.getItem(`job:${id}`);
+    return cached ? (JSON.parse(cached) as ReplacementJob) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function JobDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -44,9 +53,20 @@ export default function JobDetailPage() {
       const payload = (await response.json()) as JobResponse & { error?: string };
       if (!response.ok) throw new Error(payload.error || "任务加载失败");
       setJob(payload.job);
+      try {
+        sessionStorage.setItem(`job:${payload.job.id}`, JSON.stringify(payload.job));
+      } catch {
+        // Ignore storage failures.
+      }
       setError(null);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "任务加载失败");
+      const cachedJob = readCachedJob(id);
+      if (cachedJob) {
+        setJob(cachedJob);
+        setError("任务已创建，正在等待服务器记录同步。");
+      } else {
+        setError(loadError instanceof Error ? loadError.message : "任务加载失败");
+      }
     } finally {
       setIsLoading(false);
     }

@@ -250,6 +250,11 @@ export default function CreatePage() {
       if (!response.ok) {
         throw new Error(payload.error || "创建生成任务失败");
       }
+      try {
+        sessionStorage.setItem(`job:${payload.job.id}`, JSON.stringify(payload.job));
+      } catch {
+        // Ignore storage failures. The server copy remains the source of truth.
+      }
       router.push(`/jobs/${payload.job.id}`);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "创建任务失败");
