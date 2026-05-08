@@ -37,6 +37,14 @@ function readCachedJob(id: string) {
   }
 }
 
+function cacheJob(job: ReplacementJob) {
+  try {
+    sessionStorage.setItem(`job:${job.id}`, JSON.stringify(job));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 export default function JobDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -46,21 +54,35 @@ export default function JobDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const loadJob = useCallback(async () => {
+    const cachedJob = readCachedJob(id);
+
     try {
+      if (cachedJob?.status === "processing") {
+        const syncResponse = await fetch(`/api/jobs/${id}/sync`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ job: cachedJob })
+        });
+        const syncPayload = (await syncResponse.json()) as JobResponse & { error?: string };
+        if (syncResponse.ok) {
+          setJob(syncPayload.job);
+          cacheJob(syncPayload.job);
+          setError(null);
+          return;
+        }
+      }
+
       const response = await fetch(`/api/jobs/${id}`, {
         cache: "no-store"
       });
       const payload = (await response.json()) as JobResponse & { error?: string };
       if (!response.ok) throw new Error(payload.error || "任务加载失败");
       setJob(payload.job);
-      try {
-        sessionStorage.setItem(`job:${payload.job.id}`, JSON.stringify(payload.job));
-      } catch {
-        // Ignore storage failures.
-      }
+      cacheJob(payload.job);
       setError(null);
     } catch (loadError) {
-      const cachedJob = readCachedJob(id);
       if (cachedJob) {
         setJob(cachedJob);
         setError("任务已创建，正在等待服务器记录同步。");

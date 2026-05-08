@@ -288,6 +288,13 @@ export async function getJob(id: string) {
   return advanceJob(job);
 }
 
+export async function syncJobSnapshot(snapshot: ReplacementJob) {
+  const existing = await getJobRaw(snapshot.id);
+  const job = await advanceJob(existing ?? snapshot);
+  await saveJob(job);
+  return job;
+}
+
 export async function listJobs() {
   const jobs = await listJobsRaw();
   const advanced = await Promise.all(jobs.map((job) => advanceJob(job)));
