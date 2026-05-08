@@ -17,6 +17,7 @@ export async function GET() {
     hasFalKey: Boolean(process.env.FAL_KEY),
     uploadStorage: hasBlobToken ? "vercel-blob" : "local",
     mockDbStorage: hasBlobToken ? "vercel-blob" : "local",
+    mockDbStorageVersion: hasBlobToken ? "blob-records-v2" : "local-json",
     klingBaseUrl: process.env.KLING_BASE_URL || null,
     klingCreatePath: process.env.KLING_CREATE_PATH || null
   });
