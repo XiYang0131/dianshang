@@ -13,6 +13,7 @@ type MockDatabase = {
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DB_PATH = path.join(DATA_DIR, "mock-db.json");
 const DB_BLOB_PATH = "mock-db/mock-db.json";
+const DB_BLOB_ACCESS = "public";
 
 function createEmptyDb(): MockDatabase {
   return {
@@ -64,13 +65,18 @@ async function readBlobDb(): Promise<MockDatabase> {
   let result: Awaited<ReturnType<typeof getBlob>>;
   try {
     result = await getBlob(DB_BLOB_PATH, {
-      access: "private",
+      access: DB_BLOB_ACCESS,
       useCache: false
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const name = error instanceof Error ? error.name : "";
-    if (name.includes("NotFound") || message.toLowerCase().includes("not found")) {
+    const lowerMessage = message.toLowerCase();
+    if (
+      name.includes("NotFound") ||
+      lowerMessage.includes("not found") ||
+      lowerMessage.includes("failed to fetch blob: 400 bad request")
+    ) {
       return createEmptyDb();
     }
     throw new Error(`Blob mock database read failed: ${message}`);
@@ -93,7 +99,7 @@ async function readBlobDb(): Promise<MockDatabase> {
 async function writeBlobDb(db: MockDatabase) {
   try {
     await putBlob(DB_BLOB_PATH, JSON.stringify(db, null, 2), {
-      access: "private",
+      access: DB_BLOB_ACCESS,
       allowOverwrite: true,
       contentType: "application/json"
     });
