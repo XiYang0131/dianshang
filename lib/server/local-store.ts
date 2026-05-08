@@ -2,6 +2,7 @@ import "server-only";
 
 import { promises as fs } from "fs";
 import path from "path";
+import { get as getBlob, put as putBlob } from "@vercel/blob";
 import type { Asset, ReplacementJob } from "@/lib/types";
 
 type MockDatabase = {
@@ -11,6 +12,7 @@ type MockDatabase = {
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const DB_PATH = path.join(DATA_DIR, "mock-db.json");
+const DB_BLOB_PATH = "mock-db/mock-db.json";
 
 function createEmptyDb(): MockDatabase {
   return {
@@ -19,7 +21,15 @@ function createEmptyDb(): MockDatabase {
   };
 }
 
+function shouldUseBlobDb() {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+}
+
 async function readDb(): Promise<MockDatabase> {
+  if (shouldUseBlobDb()) {
+    return readBlobDb();
+  }
+
   try {
     const content = await fs.readFile(DB_PATH, "utf8");
     if (!content.trim()) return createEmptyDb();
@@ -37,8 +47,45 @@ async function readDb(): Promise<MockDatabase> {
 }
 
 async function writeDb(db: MockDatabase) {
+  if (shouldUseBlobDb()) {
+    await writeBlobDb(db);
+    return;
+  }
+
+  if (process.env.VERCEL) {
+    throw new Error("Vercel cannot write to local .data. Configure BLOB_READ_WRITE_TOKEN.");
+  }
+
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2), "utf8");
+}
+
+async function readBlobDb(): Promise<MockDatabase> {
+  const result = await getBlob(DB_BLOB_PATH, {
+    access: "private",
+    useCache: false
+  });
+
+  if (!result || result.statusCode === 304 || !result.stream) {
+    return createEmptyDb();
+  }
+
+  const content = await new Response(result.stream).text();
+  if (!content.trim()) return createEmptyDb();
+
+  const parsed = JSON.parse(content) as Partial<MockDatabase>;
+  return {
+    assets: Array.isArray(parsed.assets) ? parsed.assets : [],
+    jobs: Array.isArray(parsed.jobs) ? parsed.jobs : []
+  };
+}
+
+async function writeBlobDb(db: MockDatabase) {
+  await putBlob(DB_BLOB_PATH, JSON.stringify(db, null, 2), {
+    access: "private",
+    allowOverwrite: true,
+    contentType: "application/json"
+  });
 }
 
 export async function saveAsset(asset: Asset) {

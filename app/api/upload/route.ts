@@ -32,26 +32,30 @@ function extensionFor(file: File, kind: AssetKind) {
 }
 
 function assertUploadAllowed(file: File, kind: AssetKind, durationSeconds?: number) {
-  if (file.size <= 0) throw new Error("文件为空");
-  if (file.size > MAX_UPLOAD_BYTES) throw new Error("文件过大，当前上传限制为 80MB");
+  if (file.size <= 0) throw new Error("Uploaded file is empty.");
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error("Uploaded file is too large. The current limit is 80MB.");
+  }
 
   if (kind === "source_video") {
     const isMp4 = file.type === "video/mp4" || file.name.toLowerCase().endsWith(".mp4");
-    if (!isMp4) throw new Error("当前 MVP 只支持 MP4 视频");
-    if (durationSeconds && durationSeconds > 5) throw new Error("当前 MVP 只支持 5 秒以内视频");
+    if (!isMp4) throw new Error("Only MP4 video is supported.");
+    if (durationSeconds && durationSeconds > 5) {
+      throw new Error("Only videos up to 5 seconds are supported.");
+    }
     return;
   }
 
   if (kind === "product_image") {
     const allowed = ["image/jpeg", "image/png", "image/webp"];
     if (!allowed.includes(file.type)) {
-      throw new Error("商品图仅支持 JPG、PNG、WEBP");
+      throw new Error("Product images must be JPG, PNG, or WEBP.");
     }
     return;
   }
 
   if (kind !== "first_frame") {
-    throw new Error("不支持的上传类型");
+    throw new Error("Unsupported upload type.");
   }
 }
 
@@ -60,6 +64,10 @@ function shouldUseVercelBlob() {
 }
 
 async function saveToLocal(buffer: Buffer, storedFilename: string) {
+  if (process.env.VERCEL) {
+    throw new Error("Vercel cannot write to public/uploads. Configure BLOB_READ_WRITE_TOKEN and redeploy.");
+  }
+
   const uploadDir = path.join(process.cwd(), "public", "uploads");
   const filePath = path.join(uploadDir, storedFilename);
   await fs.mkdir(uploadDir, { recursive: true });
@@ -95,10 +103,10 @@ export async function POST(request: Request) {
     const durationSeconds = typeof duration === "string" ? Number(duration) : undefined;
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "缺少上传文件" }, { status: 400 });
+      return NextResponse.json({ error: "Missing upload file." }, { status: 400 });
     }
     if (!kind) {
-      return NextResponse.json({ error: "缺少上传类型" }, { status: 400 });
+      return NextResponse.json({ error: "Missing upload type." }, { status: 400 });
     }
 
     assertUploadAllowed(file, kind, Number.isFinite(durationSeconds) ? durationSeconds : undefined);
@@ -129,8 +137,9 @@ export async function POST(request: Request) {
     await saveAsset(asset);
     return NextResponse.json({ asset });
   } catch (error) {
+    console.error("Upload failed", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "上传失败" },
+      { error: error instanceof Error ? error.message : "Upload failed." },
       { status: 400 }
     );
   }
