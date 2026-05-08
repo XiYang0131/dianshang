@@ -10,9 +10,22 @@ type RouteContext = {
   }>;
 };
 
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function getJobWithRetries(id: string) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const job = await getJob(id);
+    if (job) return job;
+    if (attempt < 5) await wait(500);
+  }
+  return null;
+}
+
 export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params;
-  const job = await getJob(id);
+  const job = await getJobWithRetries(id);
   if (!job) {
     return NextResponse.json({ error: "任务不存在" }, { status: 404 });
   }
