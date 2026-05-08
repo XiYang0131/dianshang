@@ -2,7 +2,7 @@ import "server-only";
 
 import { promises as fs } from "fs";
 import path from "path";
-import { del as deleteBlob, get as getBlob, list as listBlobs, put as putBlob } from "@vercel/blob";
+import { del as deleteBlob, list as listBlobs, put as putBlob } from "@vercel/blob";
 import type { Asset, ReplacementJob } from "@/lib/types";
 
 type MockDatabase = {
@@ -74,13 +74,24 @@ async function writeDb(db: MockDatabase) {
 
 async function readBlobJson<T extends object>(pathname: string): Promise<T | null> {
   try {
-    const result = await getBlob(pathname, {
-      access: BLOB_ACCESS,
-      useCache: false
+    const listed = await listBlobs({
+      prefix: pathname,
+      limit: 10
     });
-    if (!result?.stream) return null;
+    const blob = listed.blobs.find((item) => item.pathname === pathname);
+    if (!blob) return null;
 
-    const content = await new Response(result.stream).text();
+    const url = new URL(blob.url);
+    url.searchParams.set("cache", "0");
+    url.searchParams.set("t", String(Date.now()));
+
+    const response = await fetch(url, { cache: "no-store" });
+    if (response.status === 404 || response.status === 400) return null;
+    if (!response.ok) {
+      throw new Error(`Failed to fetch blob JSON: ${response.status} ${response.statusText}`);
+    }
+
+    const content = await response.text();
     if (!content.trim()) return null;
     return JSON.parse(content) as T;
   } catch (error) {
