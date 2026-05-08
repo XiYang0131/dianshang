@@ -2,7 +2,7 @@ import "server-only";
 
 import { promises as fs } from "fs";
 import path from "path";
-import { get as getBlob, put as putBlob } from "@vercel/blob";
+import { list as listBlobs, put as putBlob } from "@vercel/blob";
 import type { Asset, ReplacementJob } from "@/lib/types";
 
 type MockDatabase = {
@@ -61,13 +61,37 @@ async function writeDb(db: MockDatabase) {
   await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2), "utf8");
 }
 
+function normalizeDb(content: string): MockDatabase {
+  if (!content.trim()) return createEmptyDb();
+  const parsed = JSON.parse(content) as Partial<MockDatabase>;
+  return {
+    assets: Array.isArray(parsed.assets) ? parsed.assets : [],
+    jobs: Array.isArray(parsed.jobs) ? parsed.jobs : []
+  };
+}
+
 async function readBlobDb(): Promise<MockDatabase> {
-  let result: Awaited<ReturnType<typeof getBlob>>;
   try {
-    result = await getBlob(DB_BLOB_PATH, {
-      access: DB_BLOB_ACCESS,
-      useCache: false
+    const listed = await listBlobs({
+      prefix: DB_BLOB_PATH,
+      limit: 10
     });
+    const blob = listed.blobs.find((item) => item.pathname === DB_BLOB_PATH);
+    if (!blob) return createEmptyDb();
+
+    const url = new URL(blob.url);
+    url.searchParams.set("cache", "0");
+    url.searchParams.set("t", String(Date.now()));
+
+    const response = await fetch(url, { cache: "no-store" });
+    if (response.status === 404 || response.status === 400) {
+      return createEmptyDb();
+    }
+    if (!response.ok) {
+      throw new Error(`Failed to fetch blob database: ${response.status} ${response.statusText}`);
+    }
+
+    return normalizeDb(await response.text());
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const name = error instanceof Error ? error.name : "";
@@ -81,19 +105,6 @@ async function readBlobDb(): Promise<MockDatabase> {
     }
     throw new Error(`Blob mock database read failed: ${message}`);
   }
-
-  if (!result || result.statusCode === 304 || !result.stream) {
-    return createEmptyDb();
-  }
-
-  const content = await new Response(result.stream).text();
-  if (!content.trim()) return createEmptyDb();
-
-  const parsed = JSON.parse(content) as Partial<MockDatabase>;
-  return {
-    assets: Array.isArray(parsed.assets) ? parsed.assets : [],
-    jobs: Array.isArray(parsed.jobs) ? parsed.jobs : []
-  };
 }
 
 async function writeBlobDb(db: MockDatabase) {

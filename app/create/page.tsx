@@ -239,7 +239,9 @@ export default function CreatePage() {
         },
         body: JSON.stringify({
           sourceVideoId: sourceVideo.id,
+          sourceVideo,
           productImageIds: uploadedImages.map((asset) => asset.id),
+          productImages: uploadedImages,
           selectionBox,
           replacementPrompt: replacementPrompt.trim()
         })

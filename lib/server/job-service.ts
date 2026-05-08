@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomUUID } from "crypto";
 import { z } from "zod";
-import type { JobStep, ReplacementJob } from "@/lib/types";
+import type { Asset, JobStep, ReplacementJob } from "@/lib/types";
 import { clamp } from "@/lib/utils";
 import type { AiProvider } from "@/lib/server/provider-types";
 import {
@@ -27,9 +27,23 @@ import {
 
 const DEFAULT_USER_ID = "mock-user";
 
+const assetSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["source_video", "product_image", "first_frame", "output_video"]),
+  url: z.string().min(1),
+  filename: z.string().min(1),
+  mimeType: z.string().min(1),
+  size: z.number().nonnegative(),
+  durationSeconds: z.number().positive().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  createdAt: z.string().min(1)
+});
+
 export const createJobSchema = z.object({
-  sourceVideoId: z.string().min(1),
-  productImageIds: z.array(z.string().min(1)).min(1).max(5),
+  sourceVideoId: z.string().min(1).optional(),
+  sourceVideo: assetSchema.optional(),
+  productImageIds: z.array(z.string().min(1)).min(1).max(5).optional(),
+  productImages: z.array(assetSchema).min(1).max(5).optional(),
   replacementPrompt: z.string().trim().min(2).max(500),
   selectionBox: z.object({
     x: z.number().nonnegative(),
@@ -43,6 +57,22 @@ export const createJobSchema = z.object({
     normalizedWidth: z.number().min(0).max(1),
     normalizedHeight: z.number().min(0).max(1)
   })
+}).superRefine((input, context) => {
+  if (!input.sourceVideoId && !input.sourceVideo) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["sourceVideoId"],
+      message: "source video is required"
+    });
+  }
+
+  if (!input.productImageIds?.length && !input.productImages?.length) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["productImageIds"],
+      message: "at least one product image is required"
+    });
+  }
 });
 
 function createStep(name: string, sortOrder: number, status: JobStep["status"], message?: string): JobStep {
@@ -193,15 +223,19 @@ async function advanceJob(job: ReplacementJob) {
 export async function createJob(input: z.infer<typeof createJobSchema>) {
   assertPolicy(input.replacementPrompt);
 
-  const sourceVideo = await getAsset(input.sourceVideoId);
+  const sourceVideo = input.sourceVideo ?? (input.sourceVideoId ? await getAsset(input.sourceVideoId) : null);
   if (!sourceVideo) {
     throw new Error("源视频不存在，请重新上传");
+  }
+  if (sourceVideo.kind !== "source_video") {
+    throw new Error("Source video asset type is invalid.");
   }
   await validateVideo(sourceVideo);
   await extractFirstFrame(sourceVideo);
 
-  const productImages = await getAssets(input.productImageIds);
-  if (productImages.length !== input.productImageIds.length) {
+  const productImages = (input.productImages?.length ? input.productImages : await getAssets(input.productImageIds ?? [])) as Asset[];
+  const expectedProductImageCount = input.productImages?.length ?? input.productImageIds?.length ?? 0;
+  if (productImages.length !== expectedProductImageCount) {
     throw new Error("部分商品图不存在，请重新上传");
   }
   if (productImages.some((asset) => asset.kind !== "product_image")) {

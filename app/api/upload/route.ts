@@ -134,7 +134,12 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString()
     };
 
-    await saveAsset(asset);
+    try {
+      await saveAsset(asset);
+    } catch (saveError) {
+      console.warn("Upload asset was stored, but metadata persistence failed", saveError);
+    }
+
     return NextResponse.json({ asset });
   } catch (error) {
     console.error("Upload failed", error);
