@@ -61,10 +61,20 @@ async function writeDb(db: MockDatabase) {
 }
 
 async function readBlobDb(): Promise<MockDatabase> {
-  const result = await getBlob(DB_BLOB_PATH, {
-    access: "private",
-    useCache: false
-  });
+  let result: Awaited<ReturnType<typeof getBlob>>;
+  try {
+    result = await getBlob(DB_BLOB_PATH, {
+      access: "private",
+      useCache: false
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const name = error instanceof Error ? error.name : "";
+    if (name.includes("NotFound") || message.toLowerCase().includes("not found")) {
+      return createEmptyDb();
+    }
+    throw new Error(`Blob mock database read failed: ${message}`);
+  }
 
   if (!result || result.statusCode === 304 || !result.stream) {
     return createEmptyDb();
@@ -81,11 +91,16 @@ async function readBlobDb(): Promise<MockDatabase> {
 }
 
 async function writeBlobDb(db: MockDatabase) {
-  await putBlob(DB_BLOB_PATH, JSON.stringify(db, null, 2), {
-    access: "private",
-    allowOverwrite: true,
-    contentType: "application/json"
-  });
+  try {
+    await putBlob(DB_BLOB_PATH, JSON.stringify(db, null, 2), {
+      access: "private",
+      allowOverwrite: true,
+      contentType: "application/json"
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Blob mock database write failed: ${message}`);
+  }
 }
 
 export async function saveAsset(asset: Asset) {
