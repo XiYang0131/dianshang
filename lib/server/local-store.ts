@@ -46,6 +46,12 @@ function isMissingBlobError(error: unknown) {
   );
 }
 
+function blobUrlForPath(pathname: string) {
+  const [, , , storeId = ""] = (process.env.BLOB_READ_WRITE_TOKEN ?? "").split("_");
+  if (!storeId) return null;
+  return `https://${storeId}.${BLOB_ACCESS}.blob.vercel-storage.com/${pathname}`;
+}
+
 async function readDb(): Promise<MockDatabase> {
   try {
     const content = await fs.readFile(DB_PATH, "utf8");
@@ -74,14 +80,19 @@ async function writeDb(db: MockDatabase) {
 
 async function readBlobJson<T extends object>(pathname: string): Promise<T | null> {
   try {
-    const listed = await listBlobs({
-      prefix: pathname,
-      limit: 10
-    });
-    const blob = listed.blobs.find((item) => item.pathname === pathname);
-    if (!blob) return null;
+    let blobUrl = blobUrlForPath(pathname);
 
-    const url = new URL(blob.url);
+    if (!blobUrl) {
+      const listed = await listBlobs({
+        prefix: pathname,
+        limit: 10
+      });
+      const blob = listed.blobs.find((item) => item.pathname === pathname);
+      if (!blob) return null;
+      blobUrl = blob.url;
+    }
+
+    const url = new URL(blobUrl);
     url.searchParams.set("cache", "0");
     url.searchParams.set("t", String(Date.now()));
 
