@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 
 type AuthFormProps = {
   mode: "login" | "register";
+  turnstileSiteKey?: string | null;
 };
 
 declare global {
@@ -31,10 +32,10 @@ declare global {
   }
 }
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, turnstileSiteKey }: AuthFormProps) {
   const router = useRouter();
-  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-  const turnstileEnabled = Boolean(turnstileSiteKey);
+  const normalizedTurnstileSiteKey = turnstileSiteKey?.trim() ?? "";
+  const turnstileEnabled = Boolean(normalizedTurnstileSiteKey);
   const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
   const turnstileWidgetIdRef = useRef<string | null>(null);
   const [email, setEmail] = useState("");
@@ -51,12 +52,12 @@ export function AuthForm({ mode }: AuthFormProps) {
     if (turnstileWidgetIdRef.current) return;
 
     turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
-      sitekey: turnstileSiteKey as string,
+      sitekey: normalizedTurnstileSiteKey,
       callback: setTurnstileToken,
       "expired-callback": () => setTurnstileToken(""),
       "error-callback": () => setTurnstileToken("")
     });
-  }, [isTurnstileReady, turnstileEnabled, turnstileSiteKey]);
+  }, [isTurnstileReady, normalizedTurnstileSiteKey, turnstileEnabled]);
 
   function resetTurnstile() {
     setTurnstileToken("");
@@ -74,7 +75,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       return;
     }
     if (turnstileEnabled && !turnstileToken) {
-      setError("请先完成人机验证。");
+      setError("请先完成人机验证后再试。");
       return;
     }
 
@@ -106,6 +107,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
           strategy="afterInteractive"
           onLoad={() => setIsTurnstileReady(true)}
+          onError={() => setError("人机验证加载失败，请刷新页面后重试。")}
         />
       ) : null}
       <Card className="w-full max-w-md rounded-lg shadow-none">
