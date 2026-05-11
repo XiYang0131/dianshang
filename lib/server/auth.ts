@@ -2,21 +2,12 @@ import "server-only";
 
 import { randomBytes } from "crypto";
 import { cookies } from "next/headers";
-import { z } from "zod";
 import { createPasswordHash, hashSessionToken, verifyPassword } from "@/lib/server/auth-crypto";
+export { authSubmissionSchema, credentialsSchema } from "@/lib/server/auth-validation";
 import { prisma } from "@/lib/server/prisma";
 
 export const AUTH_COOKIE_NAME = "product-replacer-session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
-
-export const credentialsSchema = z.object({
-  email: z.string().trim().email().max(255).transform((value) => value.toLowerCase()),
-  password: z.string().min(8).max(128)
-});
-
-export const authSubmissionSchema = credentialsSchema.extend({
-  turnstileToken: z.string().min(1).max(4096)
-});
 
 export type AuthUser = {
   id: string;

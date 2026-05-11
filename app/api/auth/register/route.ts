@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       remoteIp: getRequestIp(request)
     });
     if (!turnstile.success) {
-      return NextResponse.json({ error: "Human verification failed. Please try again." }, { status: 400 });
+      return NextResponse.json({ error: "请先完成人机验证后再试。" }, { status: 400 });
     }
 
     const user = await createUserWithPassword(input.email, input.password);
@@ -24,12 +24,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ user }, { status: 201 });
   } catch (error) {
     if (error instanceof ZodError) {
-      return NextResponse.json({ error: "Please enter a valid email and a password of at least 8 characters." }, { status: 400 });
+      return NextResponse.json({ error: "请输入有效邮箱，密码至少 8 位。" }, { status: 400 });
     }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return NextResponse.json({ error: "This email is already registered." }, { status: 409 });
+      return NextResponse.json({ error: "这个邮箱已经注册过了。" }, { status: 409 });
     }
     console.error("Registration failed", error);
-    return NextResponse.json({ error: "Registration failed." }, { status: 400 });
+    return NextResponse.json({ error: "注册失败，请稍后再试。" }, { status: 400 });
   }
 }

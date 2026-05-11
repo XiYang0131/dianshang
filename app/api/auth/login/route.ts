@@ -14,21 +14,21 @@ export async function POST(request: Request) {
       remoteIp: getRequestIp(request)
     });
     if (!turnstile.success) {
-      return NextResponse.json({ error: "Human verification failed. Please try again." }, { status: 400 });
+      return NextResponse.json({ error: "请先完成人机验证后再试。" }, { status: 400 });
     }
 
     const user = await verifyCredentials(input.email, input.password);
     if (!user) {
-      return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 });
+      return NextResponse.json({ error: "邮箱或密码不正确。" }, { status: 401 });
     }
     const session = await createSession(user.id);
     await setSessionCookie(session.token, session.expiresAt);
     return NextResponse.json({ user });
   } catch (error) {
     if (error instanceof ZodError) {
-      return NextResponse.json({ error: "Please enter a valid email and password." }, { status: 400 });
+      return NextResponse.json({ error: "请输入有效邮箱和密码。" }, { status: 400 });
     }
     console.error("Login failed", error);
-    return NextResponse.json({ error: "Login failed." }, { status: 400 });
+    return NextResponse.json({ error: "登录失败，请稍后再试。" }, { status: 400 });
   }
 }
