@@ -29,13 +29,28 @@ enum JobStepStatus {
 }
 
 model User {
+  id           String    @id @default(cuid())
+  email        String?   @unique
+  passwordHash String?
+  name         String?
+  sessions     Session[]
+  jobs         Job[]
+  assets       Asset[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Session {
   id        String   @id @default(cuid())
-  email     String?  @unique
-  name      String?
-  jobs      Job[]
-  assets    Asset[]
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Asset {
@@ -74,7 +89,9 @@ model Job {
   replacementPrompt   String
   selectionBox        Json
   safetyFlags         Json?
+  aiProvider          String?
   aiProviderJobId     String?
+  providerMetadata    Json?
   errorMessage        String?
   startedAt           DateTime?
   completedAt         DateTime?

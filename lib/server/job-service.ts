@@ -25,10 +25,9 @@ import {
   saveJob
 } from "@/lib/server/local-store";
 
-const DEFAULT_USER_ID = "mock-user";
-
 const assetSchema = z.object({
   id: z.string().min(1),
+  userId: z.string().min(1).optional(),
   kind: z.enum(["source_video", "product_image", "first_frame", "output_video"]),
   url: z.string().min(1),
   filename: z.string().min(1),
@@ -220,12 +219,16 @@ async function advanceJob(job: ReplacementJob) {
   return nextJob;
 }
 
-export async function createJob(input: z.infer<typeof createJobSchema>) {
+export async function createJob(input: z.infer<typeof createJobSchema>, userId: string) {
   assertPolicy(input.replacementPrompt);
 
-  const sourceVideo = input.sourceVideo ?? (input.sourceVideoId ? await getAsset(input.sourceVideoId) : null);
+  const sourceVideoId = input.sourceVideoId ?? input.sourceVideo?.id;
+  const sourceVideo = sourceVideoId ? await getAsset(sourceVideoId) : null;
   if (!sourceVideo) {
     throw new Error("源视频不存在，请重新上传");
+  }
+  if (sourceVideo.userId !== userId) {
+    throw new Error("Source video was not found. Please upload it again.");
   }
   if (sourceVideo.kind !== "source_video") {
     throw new Error("Source video asset type is invalid.");
@@ -233,10 +236,16 @@ export async function createJob(input: z.infer<typeof createJobSchema>) {
   await validateVideo(sourceVideo);
   await extractFirstFrame(sourceVideo);
 
-  const productImages = (input.productImages?.length ? input.productImages : await getAssets(input.productImageIds ?? [])) as Asset[];
-  const expectedProductImageCount = input.productImages?.length ?? input.productImageIds?.length ?? 0;
+  const productImageIds = input.productImageIds?.length
+    ? input.productImageIds
+    : input.productImages?.map((asset) => asset.id) ?? [];
+  const productImages = (await getAssets(productImageIds)) as Asset[];
+  const expectedProductImageCount = productImageIds.length;
   if (productImages.length !== expectedProductImageCount) {
     throw new Error("部分商品图不存在，请重新上传");
+  }
+  if (productImages.some((asset) => asset.userId !== userId)) {
+    throw new Error("Some product images were not found. Please upload them again.");
   }
   if (productImages.some((asset) => asset.kind !== "product_image")) {
     throw new Error("商品图素材类型不正确");
@@ -245,7 +254,7 @@ export async function createJob(input: z.infer<typeof createJobSchema>) {
   const now = new Date().toISOString();
   let job: ReplacementJob = {
     id: randomUUID(),
-    userId: DEFAULT_USER_ID,
+    userId,
     sourceVideo,
     productImages,
     status: "processing",
@@ -282,27 +291,28 @@ export async function createJob(input: z.infer<typeof createJobSchema>) {
   return job;
 }
 
-export async function getJob(id: string) {
-  const job = await getJobRaw(id);
+export async function getJob(id: string, userId: string) {
+  const job = await getJobRaw(id, userId);
   if (!job) return null;
   return advanceJob(job);
 }
 
-export async function syncJobSnapshot(snapshot: ReplacementJob) {
-  const existing = await getJobRaw(snapshot.id);
-  const job = await advanceJob(existing ?? snapshot);
+export async function syncJobSnapshot(snapshot: ReplacementJob, userId: string) {
+  if (snapshot.userId && snapshot.userId !== userId) return null;
+  const existing = await getJobRaw(snapshot.id, userId);
+  const job = await advanceJob(existing ?? { ...snapshot, userId });
   await saveJob(job);
   return job;
 }
 
-export async function listJobs() {
-  const jobs = await listJobsRaw();
+export async function listJobs(userId: string) {
+  const jobs = await listJobsRaw(userId);
   const advanced = await Promise.all(jobs.map((job) => advanceJob(job)));
   return advanced.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
-export async function retryJob(id: string) {
-  const current = await getJobRaw(id);
+export async function retryJob(id: string, userId: string) {
+  const current = await getJobRaw(id, userId);
   if (!current) return null;
   const now = new Date().toISOString();
   let retried: ReplacementJob = {
@@ -335,6 +345,6 @@ export async function retryJob(id: string) {
   return retried;
 }
 
-export async function deleteJob(id: string) {
-  return deleteJobRaw(id);
+export async function deleteJob(id: string, userId: string) {
+  return deleteJobRaw(id, userId);
 }

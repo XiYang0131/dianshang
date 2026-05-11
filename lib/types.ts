@@ -19,6 +19,7 @@ export type SelectionBox = {
 
 export type Asset = {
   id: string;
+  userId?: string;
   kind: AssetKind;
   url: string;
   filename: string;

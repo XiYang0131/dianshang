@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/server/auth";
 import { deleteJob, getJob } from "@/lib/server/job-service";
 
 export const runtime = "nodejs";
@@ -14,9 +15,9 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function getJobWithRetries(id: string) {
+async function getJobWithRetries(id: string, userId: string) {
   for (let attempt = 0; attempt < 6; attempt += 1) {
-    const job = await getJob(id);
+    const job = await getJob(id, userId);
     if (job) return job;
     if (attempt < 5) await wait(500);
   }
@@ -24,8 +25,13 @@ async function getJobWithRetries(id: string) {
 }
 
 export async function GET(_request: Request, context: RouteContext) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Please log in first." }, { status: 401 });
+  }
+
   const { id } = await context.params;
-  const job = await getJobWithRetries(id);
+  const job = await getJobWithRetries(id, user.id);
   if (!job) {
     return NextResponse.json({ error: "任务不存在" }, { status: 404 });
   }
@@ -33,8 +39,13 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Please log in first." }, { status: 401 });
+  }
+
   const { id } = await context.params;
-  const deleted = await deleteJob(id);
+  const deleted = await deleteJob(id, user.id);
   if (!deleted) {
     return NextResponse.json({ error: "任务不存在" }, { status: 404 });
   }

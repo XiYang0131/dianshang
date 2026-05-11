@@ -31,6 +31,35 @@ npm run prisma:generate
 npm run prisma:migrate
 ```
 
+### Neon/Postgres 元数据存储
+
+把 Neon 连接串配置到 `.env.local` 或 Vercel Project Settings 的 `DATABASE_URL`。只要存在 `DATABASE_URL`，Job/Asset 元数据会优先通过 Prisma 写入 Postgres；否则回退到 Vercel Blob JSON 或 `.data/mock-db.json`。
+
+本地执行 Prisma CLI 时，Prisma 默认读取 `.env` 或当前 shell 环境；如果连接串只放在 `.env.local`，请先把同一行 `DATABASE_URL` 同步到 `.env`，或临时设置 shell 环境变量。
+
+新 Neon 数据库首次建表可以执行：
+
+```bash
+npm run prisma:migrate:deploy
+```
+
+## 登录与用户数据
+
+应用使用邮箱密码登录。注册、登录会话、上传素材、创建任务和历史记录都保存在 `DATABASE_URL` 指向的 Postgres 数据库中，登录态通过 httpOnly cookie 保存。登录后，用户只能查看、删除和重试自己的任务。
+
+登录和注册页面接入 Cloudflare Turnstile 人机验证。把 Turnstile site key 和 secret key 配置到 `.env.local` 或 Vercel Project Settings：
+
+```bash
+NEXT_PUBLIC_TURNSTILE_SITE_KEY="your-turnstile-site-key"
+TURNSTILE_SECRET_KEY="your-turnstile-secret-key"
+```
+
+首次连接新的 Neon 数据库后执行：
+
+```bash
+npm run prisma:migrate:deploy
+```
+
 ## 接入云雾可灵
 
 创建 `.env.local`：

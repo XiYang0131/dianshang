@@ -4,6 +4,7 @@ import path from "path";
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import type { Asset, AssetKind } from "@/lib/types";
+import { getCurrentUser } from "@/lib/server/auth";
 import { saveAsset } from "@/lib/server/local-store";
 
 export const runtime = "nodejs";
@@ -96,6 +97,11 @@ async function saveToVercelBlob(file: File, buffer: Buffer, storedFilename: stri
 
 export async function POST(request: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Please log in first." }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
     const kind = formData.get("kind") as AssetKind | null;
@@ -121,6 +127,7 @@ export async function POST(request: Request) {
 
     const asset: Asset = {
       id,
+      userId: user.id,
       kind,
       url: stored.url,
       filename: safeName,

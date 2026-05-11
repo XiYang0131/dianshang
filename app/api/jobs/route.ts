@@ -1,20 +1,31 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
+import { getCurrentUser } from "@/lib/server/auth";
 import { createJob, createJobSchema, listJobs } from "@/lib/server/job-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const jobs = await listJobs();
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Please log in first." }, { status: 401 });
+  }
+
+  const jobs = await listJobs(user.id);
   return NextResponse.json({ jobs });
 }
 
 export async function POST(request: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Please log in first." }, { status: 401 });
+    }
+
     const payload = await request.json();
     const input = createJobSchema.parse(payload);
-    const job = await createJob(input);
+    const job = await createJob(input, user.id);
     return NextResponse.json({ job }, { status: 201 });
   } catch (error) {
     if (error instanceof ZodError) {

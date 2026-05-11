@@ -170,6 +170,7 @@ export async function updateJobProgress(job: ReplacementJob, progress: number) {
 export async function saveOutputVideo(job: ReplacementJob, generated?: GeneratedVideo): Promise<Asset> {
   return {
     id: randomUUID(),
+    userId: job.userId,
     kind: "output_video",
     url: generated?.url ?? job.sourceVideo.url,
     filename: generated?.filename ?? `generated-${job.sourceVideo.filename}`,
