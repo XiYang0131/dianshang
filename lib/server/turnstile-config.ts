@@ -11,12 +11,15 @@ export function getTurnstileConfig(env: Record<string, string | undefined> = pro
   const siteKey = getTurnstileSiteKey(env);
   const hasSecretKey = Boolean(cleanEnvValue(env.TURNSTILE_SECRET_KEY));
   const hasAnyTurnstileSetting = Boolean(siteKey || hasSecretKey);
+  const isProduction = env.NODE_ENV === "production" || Boolean(env.VERCEL);
+  const isRequired = isProduction || hasAnyTurnstileSetting;
   const isEnabled = Boolean(siteKey && hasSecretKey);
 
   return {
     siteKey,
     hasSecretKey,
+    isRequired,
     isEnabled,
-    isMisconfigured: hasAnyTurnstileSetting && !isEnabled
+    isMisconfigured: isRequired && !isEnabled
   };
 }

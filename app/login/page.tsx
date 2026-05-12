@@ -11,7 +11,7 @@ export default async function LoginPage() {
     <AuthForm
       mode="login"
       turnstileSiteKey={turnstileConfig.siteKey}
-      turnstileRequired={turnstileConfig.isEnabled}
+      turnstileRequired={turnstileConfig.isRequired}
       turnstileMisconfigured={turnstileConfig.isMisconfigured}
     />
   );

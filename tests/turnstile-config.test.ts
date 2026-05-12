@@ -39,6 +39,7 @@ test("turnstile config is ready only when site and secret keys are both present"
     {
       siteKey: "public-site-key",
       hasSecretKey: true,
+      isRequired: true,
       isEnabled: true,
       isMisconfigured: false
     }
@@ -54,8 +55,39 @@ test("turnstile config reports a partial setup as misconfigured", () => {
     {
       siteKey: undefined,
       hasSecretKey: true,
+      isRequired: true,
       isEnabled: false,
       isMisconfigured: true
+    }
+  );
+});
+
+test("turnstile config is required by default in production", () => {
+  assert.deepEqual(
+    getTurnstileConfig({
+      NODE_ENV: "production"
+    }),
+    {
+      siteKey: undefined,
+      hasSecretKey: false,
+      isRequired: true,
+      isEnabled: false,
+      isMisconfigured: true
+    }
+  );
+});
+
+test("turnstile config can stay disabled in local development", () => {
+  assert.deepEqual(
+    getTurnstileConfig({
+      NODE_ENV: "development"
+    }),
+    {
+      siteKey: undefined,
+      hasSecretKey: false,
+      isRequired: false,
+      isEnabled: false,
+      isMisconfigured: false
     }
   );
 });

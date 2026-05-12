@@ -11,7 +11,7 @@ export default async function RegisterPage() {
     <AuthForm
       mode="register"
       turnstileSiteKey={turnstileConfig.siteKey}
-      turnstileRequired={turnstileConfig.isEnabled}
+      turnstileRequired={turnstileConfig.isRequired}
       turnstileMisconfigured={turnstileConfig.isMisconfigured}
     />
   );
