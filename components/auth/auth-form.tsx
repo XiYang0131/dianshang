@@ -10,9 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+const TURNSTILE_LOAD_TIMEOUT_MS = 12000;
+
 type AuthFormProps = {
   mode: "login" | "register";
   turnstileSiteKey?: string | null;
+  turnstileRequired?: boolean;
+  turnstileMisconfigured?: boolean;
 };
 
 declare global {
@@ -32,10 +36,15 @@ declare global {
   }
 }
 
-export function AuthForm({ mode, turnstileSiteKey }: AuthFormProps) {
+export function AuthForm({
+  mode,
+  turnstileSiteKey,
+  turnstileRequired = false,
+  turnstileMisconfigured = false
+}: AuthFormProps) {
   const router = useRouter();
   const normalizedTurnstileSiteKey = turnstileSiteKey?.trim() ?? "";
-  const turnstileEnabled = Boolean(normalizedTurnstileSiteKey);
+  const turnstileEnabled = turnstileRequired && Boolean(normalizedTurnstileSiteKey) && !turnstileMisconfigured;
   const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
   const turnstileWidgetIdRef = useRef<string | null>(null);
   const [email, setEmail] = useState("");
@@ -43,21 +52,61 @@ export function AuthForm({ mode, turnstileSiteKey }: AuthFormProps) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [isTurnstileReady, setIsTurnstileReady] = useState(false);
+  const [isTurnstileRendered, setIsTurnstileRendered] = useState(false);
+  const [turnstileLoadError, setTurnstileLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isRegister = mode === "register";
+  const turnstileConfigError = turnstileMisconfigured
+    ? "人机验证配置未完成，请联系站点管理员。"
+    : null;
+
+  useEffect(() => {
+    if (!turnstileEnabled) return;
+
+    if (window.turnstile) {
+      setIsTurnstileReady(true);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      if (!window.turnstile) {
+        setTurnstileLoadError("人机验证加载超时，请刷新页面后重试。");
+      }
+    }, TURNSTILE_LOAD_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [turnstileEnabled]);
 
   useEffect(() => {
     if (!turnstileEnabled || !isTurnstileReady || !turnstileContainerRef.current || !window.turnstile) return;
     if (turnstileWidgetIdRef.current) return;
 
-    turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
-      sitekey: normalizedTurnstileSiteKey,
-      callback: setTurnstileToken,
-      "expired-callback": () => setTurnstileToken(""),
-      "error-callback": () => setTurnstileToken("")
-    });
+    try {
+      turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+        sitekey: normalizedTurnstileSiteKey,
+        callback: (token) => {
+          setTurnstileToken(token);
+          setTurnstileLoadError(null);
+          setError(null);
+        },
+        "expired-callback": () => setTurnstileToken(""),
+        "error-callback": () => {
+          setTurnstileToken("");
+          setTurnstileLoadError("人机验证出错，请刷新页面后重试。");
+        }
+      });
+      setIsTurnstileRendered(true);
+      setTurnstileLoadError(null);
+    } catch {
+      setTurnstileLoadError("人机验证渲染失败，请刷新页面后重试。");
+    }
   }, [isTurnstileReady, normalizedTurnstileSiteKey, turnstileEnabled]);
+
+  function markTurnstileReady() {
+    setTurnstileLoadError(null);
+    setIsTurnstileReady(true);
+  }
 
   function resetTurnstile() {
     setTurnstileToken("");
@@ -70,12 +119,16 @@ export function AuthForm({ mode, turnstileSiteKey }: AuthFormProps) {
     event.preventDefault();
     setError(null);
 
+    if (turnstileConfigError) {
+      setError(turnstileConfigError);
+      return;
+    }
     if (isRegister && password !== confirmPassword) {
       setError("两次输入的密码不一致。");
       return;
     }
-    if (turnstileEnabled && !turnstileToken) {
-      setError("请先完成人机验证后再试。");
+    if (turnstileRequired && !turnstileToken) {
+      setError(turnstileLoadError ?? "请先完成人机验证后再试。");
       return;
     }
 
@@ -106,8 +159,9 @@ export function AuthForm({ mode, turnstileSiteKey }: AuthFormProps) {
         <Script
           src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
           strategy="afterInteractive"
-          onLoad={() => setIsTurnstileReady(true)}
-          onError={() => setError("人机验证加载失败，请刷新页面后重试。")}
+          onLoad={markTurnstileReady}
+          onReady={markTurnstileReady}
+          onError={() => setTurnstileLoadError("人机验证加载失败，请刷新页面后重试。")}
         />
       ) : null}
       <Card className="w-full max-w-md rounded-lg shadow-none">
@@ -118,10 +172,10 @@ export function AuthForm({ mode, turnstileSiteKey }: AuthFormProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error ? (
+          {error || turnstileConfigError ? (
             <div className="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{error}</span>
+              <span>{error ?? turnstileConfigError}</span>
             </div>
           ) : null}
           <form className="space-y-4" onSubmit={handleSubmit}>
@@ -160,14 +214,23 @@ export function AuthForm({ mode, turnstileSiteKey }: AuthFormProps) {
               </div>
             ) : null}
             {turnstileEnabled ? (
-              <div className="min-h-[65px]">
-                <div ref={turnstileContainerRef} />
+              <div className="space-y-2">
+                <div className="min-h-[65px]">
+                  <div ref={turnstileContainerRef} />
+                  {!isTurnstileRendered ? (
+                    <div className="flex h-[65px] items-center gap-2 rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 text-sm text-slate-500">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>{turnstileLoadError ? "人机验证暂不可用" : "正在加载人机验证..."}</span>
+                    </div>
+                  ) : null}
+                </div>
+                {turnstileLoadError ? <p className="text-sm text-red-600">{turnstileLoadError}</p> : null}
               </div>
             ) : null}
             <Button
               type="submit"
               className="h-11 w-full rounded-md"
-              disabled={isSubmitting || (turnstileEnabled && !turnstileToken)}
+              disabled={isSubmitting || turnstileMisconfigured || (turnstileRequired && !turnstileToken)}
             >
               {isSubmitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
