@@ -8,11 +8,11 @@ import {
   ShieldAlert,
   Sparkles,
   UploadCloud,
-  Video
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import ScrollExpandMedia from "@/components/ui/scroll-expansion-hero";
 
 const steps = [
   {
@@ -49,22 +49,26 @@ const limits = [
 export default function HomePage() {
   return (
     <div className="pb-20">
-      <section className="border-b bg-white">
-        <div className="container grid min-h-[calc(100vh-4rem)] items-center gap-10 py-12 lg:grid-cols-[1fr_0.95fr] lg:py-16">
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <Badge className="bg-secondary text-secondary-foreground hover:bg-secondary">
-                中小电商素材测试工具
-              </Badge>
-              <div className="space-y-5">
-                <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-normal text-slate-950 md:text-6xl">
-                  换品片场
-                </h1>
-                <p className="max-w-2xl text-lg leading-8 text-slate-600">
-                  上传 5 秒以内电商短视频，手动框选旧商品，再用自己的商品图生成替换后的视频素材。保留人物和背景，只改商品，用于带货素材快速测试。
-                </p>
-              </div>
-            </div>
+      <ScrollExpandMedia
+        mediaType="image"
+        mediaSrc="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1280&auto=format&fit=crop"
+        bgImageSrc="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=1920&auto=format&fit=crop"
+        title="换品片场 AI 商品替换"
+        date="中小电商素材测试工具"
+        scrollToExpand="滚动展开工作台"
+        textBlend
+      >
+        <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-[1.05fr_0.95fr] md:items-center">
+          <div className="space-y-5">
+            <Badge className="bg-secondary text-secondary-foreground hover:bg-secondary">
+              中小电商素材测试工具
+            </Badge>
+            <h1 className="text-3xl font-semibold tracking-normal text-slate-950 md:text-5xl">
+              从爆款视频到自有商品素材
+            </h1>
+            <p className="text-base leading-8 text-slate-600 md:text-lg">
+              上传 5 秒以内电商短视频，手动框选旧商品，再用自己的商品图生成替换后的视频素材。保留人物和背景，只改商品，用于带货素材快速测试。
+            </p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg" className="h-12 rounded-md px-5">
                 <Link href="/create">
@@ -78,46 +82,18 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="relative">
-            <div className="overflow-hidden rounded-lg border bg-slate-950 shadow-panel">
-              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                <div className="flex items-center gap-2 text-sm text-white">
-                  <Video className="h-4 w-4 text-cyan-300" />
-                  5s 商品替换任务
-                </div>
-                <Badge className="bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/15">
-                  processing
-                </Badge>
+          <div className="grid gap-3 rounded-lg border bg-white/80 p-4 shadow-panel backdrop-blur">
+            {["上传短视频", "框选旧商品", "上传商品图", "生成并预览"].map((item, index) => (
+              <div key={item} className="flex items-center gap-3 rounded-md bg-slate-50 px-4 py-3">
+                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-sm font-semibold text-primary">
+                  {index + 1}
+                </span>
+                <span className="text-sm font-medium text-slate-700">{item}</span>
               </div>
-              <div className="grid gap-0 md:grid-cols-2">
-                <div className="relative aspect-[4/5] bg-slate-900">
-                  <div className="absolute inset-x-6 top-8 h-24 rounded-md bg-cyan-300/20" />
-                  <div className="absolute bottom-0 left-1/2 h-64 w-36 -translate-x-1/2 rounded-t-full bg-slate-200" />
-                  <div className="absolute bottom-16 left-1/2 h-28 w-28 -translate-x-1/2 rounded-md border-2 border-amber-300 bg-amber-400/90 shadow-lg" />
-                  <div className="absolute bottom-12 left-10 rounded bg-white/90 px-2 py-1 text-xs font-medium text-slate-900">
-                    原视频
-                  </div>
-                </div>
-                <div className="relative aspect-[4/5] bg-slate-900">
-                  <div className="absolute inset-x-6 top-8 h-24 rounded-md bg-cyan-300/20" />
-                  <div className="absolute bottom-0 left-1/2 h-64 w-36 -translate-x-1/2 rounded-t-full bg-slate-200" />
-                  <div className="absolute bottom-16 left-1/2 h-28 w-28 -translate-x-1/2 rounded-md border-2 border-emerald-300 bg-emerald-500/90 shadow-lg" />
-                  <div className="absolute bottom-12 left-10 rounded bg-white/90 px-2 py-1 text-xs font-medium text-slate-900">
-                    替换后
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-4 border-t border-white/10 text-xs text-slate-300">
-                {["上传", "框选", "生成", "预览"].map((item) => (
-                  <div key={item} className="border-r border-white/10 px-3 py-3 last:border-r-0">
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
-      </section>
+      </ScrollExpandMedia>
 
       <section className="container py-16">
         <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
