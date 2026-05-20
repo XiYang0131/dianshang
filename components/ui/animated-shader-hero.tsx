@@ -16,10 +16,12 @@ export interface AnimatedShaderHeroProps {
   buttons?: {
     primary?: {
       text: string;
+      href?: string;
       onClick?: () => void;
     };
     secondary?: {
       text: string;
+      href?: string;
       onClick?: () => void;
     };
   };
@@ -490,22 +492,40 @@ const AnimatedShaderHero: React.FC<AnimatedShaderHeroProps> = ({
           {buttons && (
             <div className="mt-10 flex animate-fade-in-up flex-col justify-center gap-4 animation-delay-800 sm:flex-row">
               {buttons.primary && (
-                <button
-                  type="button"
-                  onClick={buttons.primary.onClick}
-                  className="rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 px-8 py-4 text-lg font-semibold text-black transition-all duration-300 hover:scale-105 hover:from-orange-600 hover:to-yellow-600 hover:shadow-xl hover:shadow-orange-500/25"
-                >
-                  {buttons.primary.text}
-                </button>
+                buttons.primary.href ? (
+                  <a
+                    href={buttons.primary.href}
+                    className="rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 px-8 py-4 text-lg font-semibold text-black transition-all duration-300 hover:scale-105 hover:from-orange-600 hover:to-yellow-600 hover:shadow-xl hover:shadow-orange-500/25"
+                  >
+                    {buttons.primary.text}
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={buttons.primary.onClick}
+                    className="rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 px-8 py-4 text-lg font-semibold text-black transition-all duration-300 hover:scale-105 hover:from-orange-600 hover:to-yellow-600 hover:shadow-xl hover:shadow-orange-500/25"
+                  >
+                    {buttons.primary.text}
+                  </button>
+                )
               )}
               {buttons.secondary && (
-                <button
-                  type="button"
-                  onClick={buttons.secondary.onClick}
-                  className="rounded-full border border-orange-300/30 bg-orange-500/10 px-8 py-4 text-lg font-semibold text-orange-100 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-orange-300/50 hover:bg-orange-500/20"
-                >
-                  {buttons.secondary.text}
-                </button>
+                buttons.secondary.href ? (
+                  <a
+                    href={buttons.secondary.href}
+                    className="rounded-full border border-orange-300/30 bg-orange-500/10 px-8 py-4 text-lg font-semibold text-orange-100 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-orange-300/50 hover:bg-orange-500/20"
+                  >
+                    {buttons.secondary.text}
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={buttons.secondary.onClick}
+                    className="rounded-full border border-orange-300/30 bg-orange-500/10 px-8 py-4 text-lg font-semibold text-orange-100 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-orange-300/50 hover:bg-orange-500/20"
+                  >
+                    {buttons.secondary.text}
+                  </button>
+                )
               )}
             </div>
           )}
