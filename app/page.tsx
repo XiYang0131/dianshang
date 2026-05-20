@@ -13,7 +13,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import AnimatedShaderHero from "@/components/ui/animated-shader-hero";
 
 const steps = [
   {
@@ -50,29 +49,6 @@ const limits = [
 export default function HomePage() {
   return (
     <div className="pb-20">
-      <AnimatedShaderHero
-        trustBadge={{
-          text: "中小电商素材测试工具",
-          icons: ["✨"]
-        }}
-        headline={{
-          line1: "换品片场",
-          line2: "AI 商品替换"
-        }}
-        subtitle="上传 5 秒以内电商短视频，框选旧商品，再用自己的商品图生成替换后的视频素材。保留人物和背景，只改商品。"
-        buttons={{
-          primary: {
-            text: "开始生成",
-            href: "/create"
-          },
-          secondary: {
-            text: "查看历史",
-            href: "/history"
-          }
-        }}
-        className="min-h-[calc(100vh-4rem)]"
-      />
-
       <section className="border-b bg-white">
         <div className="container grid min-h-[calc(100vh-4rem)] items-center gap-10 py-12 lg:grid-cols-[1fr_0.95fr] lg:py-16">
           <div className="space-y-8">

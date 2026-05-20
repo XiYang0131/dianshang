@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
+import { SiteIntro } from "@/components/site-intro";
 import { getCurrentUser } from "@/lib/server/auth";
 
 export const metadata: Metadata = {
@@ -18,6 +19,7 @@ export default async function RootLayout({
   return (
     <html lang="zh-CN">
       <body>
+        <SiteIntro />
         <SiteHeader user={user} />
         <main>{children}</main>
       </body>
