@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Gallery4, type Gallery4Item } from "@/components/ui/gallery4";
 import ScrollExpandMedia from "@/components/ui/scroll-expansion-hero";
 
 const steps = [
@@ -44,6 +45,44 @@ const limits = [
   "不支持仿冒品牌 Logo",
   "不支持违法违禁商品",
   "不承诺 100% 成功"
+];
+
+const featureGalleryItems: Gallery4Item[] = [
+  {
+    id: "product-swap",
+    title: "商品主体替换",
+    description: "保留人物、镜头和背景节奏，只替换画面里的旧商品，让同一条素材快速测试不同 SKU。",
+    href: "/create",
+    image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=1080&auto=format&fit=crop"
+  },
+  {
+    id: "frame-select",
+    title: "首帧手动框选",
+    description: "在第一帧圈定商品区域，减少模型误判，让生成任务更聚焦在真正需要替换的对象上。",
+    href: "/create",
+    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1080&auto=format&fit=crop"
+  },
+  {
+    id: "reference-images",
+    title: "多商品图约束",
+    description: "上传 1 到 5 张商品图作为视觉参考，帮助生成结果保持主体外观、颜色和卖点一致。",
+    href: "/create",
+    image: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=1080&auto=format&fit=crop"
+  },
+  {
+    id: "job-progress",
+    title: "任务进度追踪",
+    description: "创建任务后持续展示处理状态，方便团队查看生成、失败、重试和结果分发流程。",
+    href: "/history",
+    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1080&auto=format&fit=crop"
+  },
+  {
+    id: "result-delivery",
+    title: "结果预览下载",
+    description: "生成完成后直接预览替换视频，并支持下载用于投放测试、商品页素材和团队复盘。",
+    href: "/history",
+    image: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?q=80&w=1080&auto=format&fit=crop"
+  }
 ];
 
 export default function HomePage() {
@@ -128,6 +167,12 @@ export default function HomePage() {
           })}
         </div>
       </section>
+
+      <Gallery4
+        title="功能场景"
+        description="把商品替换流程拆成可重复使用的能力模块，从素材上传、框选约束到任务追踪和结果分发，适合电商团队快速试投。"
+        items={featureGalleryItems}
+      />
 
       <section className="border-y bg-white">
         <div className="container grid gap-8 py-14 lg:grid-cols-[0.9fr_1.1fr]">

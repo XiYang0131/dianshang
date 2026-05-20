@@ -28,3 +28,16 @@ test("home page uses the scroll expansion hero as page content", () => {
   assert.match(packageSource, /"framer-motion"/);
   assert.match(nextConfigSource, /images\.unsplash\.com/);
 });
+
+test("home page uses the gallery feature carousel", () => {
+  const pageSource = readFileSync("app/page.tsx", "utf8");
+  const gallerySource = readFileSync("components/ui/gallery4.tsx", "utf8");
+  const carouselSource = readFileSync("components/ui/carousel.tsx", "utf8");
+  const packageSource = readFileSync("package.json", "utf8");
+
+  assert.match(pageSource, /@\/components\/ui\/gallery4/);
+  assert.match(pageSource, /<Gallery4\b/);
+  assert.match(gallerySource, /export \{ Gallery4 \}/);
+  assert.match(carouselSource, /embla-carousel-react/);
+  assert.match(packageSource, /"embla-carousel-react"/);
+});
